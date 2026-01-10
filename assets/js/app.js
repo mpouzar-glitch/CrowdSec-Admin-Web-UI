@@ -12,6 +12,7 @@ let worldMapData = {
     alerts: { values: {}, max: 0 },
     decisions: { values: {}, max: 0 }
 };
+let sourcesChart = null;
 
 // Utility functions
 function normalizeString(value) {
@@ -135,9 +136,7 @@ function updateMapLegend(mode) {
     if (!legend) return;
     const dataset = worldMapData[mode] || { max: 0 };
     const label = mode === 'decisions' ? 'banů' : 'alertů';
-    const gradient = mode === 'decisions'
-        ? 'linear-gradient(90deg, #fee2e2, #dc2626)'
-        : 'linear-gradient(90deg, #dbeafe, #2563eb)';
+    const gradient = 'linear-gradient(90deg, #fef08a, #ef4444)';
     legend.innerHTML = dataset.max
         ? `<span>0</span><span class="legend-gradient" style="background:${gradient}"></span><span>${dataset.max}</span><span class="legend-label">Počet ${label}</span>`
         : `<span class="legend-empty">Žádná data pro mapu (${label}).</span>`;
@@ -148,9 +147,7 @@ function renderWorldMap() {
     if (!container || typeof jsVectorMap === 'undefined') return;
 
     const dataset = worldMapData[worldMapMode] || { values: {}, max: 0 };
-    const scale = worldMapMode === 'decisions'
-        ? ['#fee2e2', '#dc2626']
-        : ['#dbeafe', '#2563eb'];
+    const scale = ['#fef08a', '#ef4444'];
 
     if (worldMap) {
         worldMap.destroy();
@@ -189,6 +186,49 @@ function renderWorldMap() {
 function setWorldMapMode(mode) {
     worldMapMode = mode;
     renderWorldMap();
+}
+
+function updateSourcesChart(data) {
+    const ctx = document.getElementById('sourcesChart');
+    if (!ctx) return;
+
+    const labels = data.map(row => row.host || 'Neznámý');
+    const values = data.map(row => row.count);
+
+    if (sourcesChart) {
+        sourcesChart.destroy();
+    }
+
+    sourcesChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: [
+                    '#ef4444',
+                    '#f97316',
+                    '#facc15',
+                    '#22c55e',
+                    '#38bdf8',
+                    '#a855f7',
+                    '#64748b'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12
+                    }
+                }
+            }
+        }
+    });
 }
 
 // API calls
@@ -291,6 +331,10 @@ async function loadDashboard() {
             renderWorldMap();
         }
 
+        if (stats.alerts_by_host) {
+            updateSourcesChart(stats.alerts_by_host);
+        }
+
     } catch (error) {
         console.error('Failed to load dashboard:', error);
     }
@@ -380,9 +424,7 @@ function updateCountriesTable(data) {
                 ${row.country || 'Unknown'}
             </td>
             <td>
-                <button class="map-mini" data-country="${row.country || ''}" title="Zobrazit na mapě">
-                    <i class="fas fa-map-marked-alt"></i>
-                </button>
+                <span class="country-flag">${getCountryFlag(row.country)}</span>
             </td>
             <td>${row.count}</td>
         </tr>
@@ -863,16 +905,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 input.value = value;
                 input.dispatchEvent(new Event('input', { bubbles: true }));
             }
-        });
-    }
-
-    const countriesTable = document.getElementById('countriesTable');
-    if (countriesTable) {
-        countriesTable.addEventListener('click', (event) => {
-            const button = event.target.closest('.map-mini');
-            if (!button) return;
-            const code = button.dataset.country;
-            focusCountryOnMap(code);
         });
     }
 
