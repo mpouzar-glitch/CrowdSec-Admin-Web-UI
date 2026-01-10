@@ -1,0 +1,32 @@
+# Enable rewrite engine
+RewriteEngine On
+
+# API routes - preserve query string
+RewriteRule ^api/alerts/?$ api/alerts.php [QSA,L]
+RewriteRule ^api/alerts/([0-9]+)$ api/alerts.php?id=$1 [QSA,L]
+RewriteRule ^api/decisions/?$ api/decisions.php [QSA,L]
+RewriteRule ^api/decisions/([0-9]+)$ api/decisions.php?id=$1 [QSA,L]
+RewriteRule ^api/stats/?$ api/stats.php [QSA,L]
+RewriteRule ^api/config/?$ api/config.php [QSA,L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# Compress files
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Cache static assets
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
+
