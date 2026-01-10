@@ -86,6 +86,18 @@ try {
     ");
     $stats['timeline_24h'] = $stmt->fetchAll();
 
+    // Alerts by host (CrowdSec service)
+    $stmt = $db->prepare("
+        SELECT COALESCE(machine_id, 'Neznámý') as host, COUNT(*) as count
+        FROM alerts
+        WHERE created_at >= ?
+        GROUP BY machine_id
+        ORDER BY count DESC
+        LIMIT 7
+    ");
+    $stmt->execute([$since]);
+    $stats['alerts_by_host'] = $stmt->fetchAll();
+
     jsonResponse($stats);
 
 } catch (Exception $e) {

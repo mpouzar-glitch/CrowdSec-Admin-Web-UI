@@ -59,8 +59,18 @@ renderPageStart($appTitle . ' - Dashboard', 'dashboard', $appTitle);
             </div>
         </div>
         <div class="card-body">
-            <div class="world-map" id="worldMap"></div>
-            <div class="map-legend" id="mapLegend"></div>
+            <div class="map-split">
+                <div class="map-panel">
+                    <div class="world-map" id="worldMap"></div>
+                    <div class="map-legend" id="mapLegend"></div>
+                </div>
+                <div class="map-panel">
+                    <h3 class="chart-title">Alerty podle hostů</h3>
+                    <div class="chart-container">
+                        <canvas id="sourcesChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -74,7 +84,7 @@ renderPageStart($appTitle . ' - Dashboard', 'dashboard', $appTitle);
                     <thead>
                         <tr>
                             <th>Země</th>
-                            <th>Mapa</th>
+                            <th>Vlajka</th>
                             <th>Počet</th>
                         </tr>
                     </thead>

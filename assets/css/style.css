@@ -491,7 +491,7 @@ a {
 .map-card .card-body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
 .map-header {
@@ -516,11 +516,35 @@ a {
     font-size: 14px;
 }
 
+.map-split {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.map-panel {
+    flex: 1 1 320px;
+    min-width: 0;
+}
+
 .world-map {
     width: 100%;
     min-height: 360px;
     border-radius: 16px;
     background: #f8fafc;
+}
+
+.chart-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+.chart-container {
+    position: relative;
+    min-height: 360px;
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 16px;
 }
 
 .map-legend {
@@ -546,18 +570,6 @@ a {
     font-style: italic;
 }
 
-.map-mini {
-    border: none;
-    background: rgba(37, 99, 235, 0.12);
-    color: #2563eb;
-    padding: 6px 8px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-.map-mini:hover {
-    background: rgba(37, 99, 235, 0.2);
-}
 
 .ip-action {
     position: relative;
