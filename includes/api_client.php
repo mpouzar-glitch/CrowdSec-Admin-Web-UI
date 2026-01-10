@@ -56,15 +56,19 @@ class CrowdSecAPI {
         $this->login();
     }
     
-    private function saveToken($token, $expiresIn = 3600) {
+    private function saveToken($token, $expiresAt = null, $expiresIn = 3600) {
         $dir = dirname($this->tokenFile);
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
+
+        if ($expiresAt === null) {
+            $expiresAt = time() + $expiresIn;
+        }
         
         $data = [
             'token' => $token,
-            'expires' => time() + $expiresIn - 60 // 60s buffer
+            'expires' => $expiresAt - 60 // 60s buffer
         ];
         
         file_put_contents($this->tokenFile, json_encode($data));
@@ -90,7 +94,14 @@ class CrowdSecAPI {
         
         if (isset($response['token'])) {
             $this->token = $response['token'];
-            $this->saveToken($this->token);
+            $expiresAt = null;
+            if (isset($response['expire'])) {
+                $expiresAt = strtotime($response['expire']);
+                if ($expiresAt === false) {
+                    $expiresAt = null;
+                }
+            }
+            $this->saveToken($this->token, $expiresAt);
             return true;
         }
         
