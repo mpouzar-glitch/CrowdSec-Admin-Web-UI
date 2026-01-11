@@ -458,10 +458,14 @@ function updateIpsTable(data) {
 // Alerts functions
 async function loadAlerts() {
     try {
-        alertsData = await apiGet('/alerts.php');
+        const [alerts, summary] = await Promise.all([
+            apiGet('/alerts.php'),
+            apiGet('/alerts.php?summary=1')
+        ]);
+        alertsData = alerts;
         const totalCount = document.getElementById('alertsTotalCount');
         if (totalCount) {
-            totalCount.textContent = alertsData.length;
+            totalCount.textContent = summary?.total_alerts ?? alertsData.length;
         }
         updateAlertFilterOptions();
         renderAlerts();
