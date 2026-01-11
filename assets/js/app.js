@@ -1149,49 +1149,55 @@ function showAlertModal(alert) {
             ? alert.events
             : [];
 
+    const hiddenEventKeys = new Set([
+        'timestamp',
+        'isineu',
+        'isocode',
+        'country',
+        'sourcecountry',
+        'stat',
+        'cn'
+    ]);
+
+    const normalizeEventKey = (key) => (key ?? '')
+        .toString()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '');
+
     const eventsHtml = events.length > 0
         ? `
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Čas</th>
-                        <th>Podrobnosti</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${events.map(event => {
-                        const eventTime = event.time ? formatDateTime(event.time) : '-';
-                        const metaItems = Array.isArray(event.meta) ? event.meta : [];
-                        const metaHtml = metaItems.length > 0
-                            ? `
-                                <table class="data-table data-table-compact">
-                                    <thead>
-                                        <tr>
-                                            <th>Klíč</th>
-                                            <th>Hodnota</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${metaItems.map(meta => `
-                                            <tr>
-                                                <td>${meta.key ?? '-'}</td>
-                                                <td>${meta.value ?? '-'}</td>
-                                            </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            `
-                            : '<span class="muted">Bez detailů</span>';
+            <div class="alert-events">
+                ${events.map(event => {
+                    const eventTime = event.time ? formatDateTime(event.time) : '-';
+                    const metaItems = Array.isArray(event.meta) ? event.meta : [];
+                    const filteredMeta = metaItems.filter(meta => {
+                        const key = normalizeEventKey(meta?.key);
+                        return key && !hiddenEventKeys.has(key);
+                    });
+                    const metaHtml = filteredMeta.length > 0
+                        ? `
+                            <div class="alert-event-meta">
+                                ${filteredMeta.map(meta => `
+                                    <div class="alert-event-meta-row">
+                                        <span class="alert-event-meta-key">${meta.key ?? '-'}</span>
+                                        <span class="alert-event-meta-value">${meta.value ?? '-'}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `
+                        : '<div class="muted alert-event-empty">Bez detailů</div>';
 
-                        return `
-                            <tr>
-                                <td>${eventTime}</td>
-                                <td>${metaHtml}</td>
-                            </tr>
-                        `;
-                    }).join('')}
-                </tbody>
-            </table>
+                    return `
+                        <div class="alert-event-card">
+                            <div class="alert-event-header">
+                                <span class="alert-event-time">${eventTime}</span>
+                                <span class="alert-event-id">#${event.id ?? '-'}</span>
+                            </div>
+                            ${metaHtml}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
         `
         : '<p>Žádné události</p>';
 
