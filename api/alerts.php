@@ -20,12 +20,39 @@ try {
     $method = $_SERVER['REQUEST_METHOD'];
     $uri = $_SERVER['REQUEST_URI'];
 
+    // GET /api/alerts?summary=1 - total count
+    if ($method === 'GET' && isset($_GET['summary'])) {
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM alerts");
+        $stmt->execute();
+        $total = $stmt->fetchColumn();
+
+        jsonResponse(['total_alerts' => (int) $total]);
+    }
+
     // GET /api/alerts?id=:id - detail
-    if ($method === 'GET' && isset($_GET['id'])) {
+    elseif ($method === 'GET' && isset($_GET['id'])) {
         $id = $_GET['id'];
 
         $api = new CrowdSecAPI();
         $alertData = $api->getAlertById($id);
+
+        $stmt = $db->prepare("
+            SELECT 
+                d.id,
+                d.type,
+                d.value,
+                d.until,
+                d.origin,
+                d.scenario
+            FROM decisions d
+            WHERE d.alert_decisions = ?
+        ");
+        $stmt->execute([$id]);
+        $alertData['decisions'] = $stmt->fetchAll();
+
+        foreach ($alertData['decisions'] as &$decision) {
+            $decision['expired'] = strtotime($decision['until']) < time();
+        }
 
         jsonResponse($alertData);
     }
