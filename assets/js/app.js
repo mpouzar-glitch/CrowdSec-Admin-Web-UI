@@ -13,6 +13,8 @@ let worldMapData = {
     decisions: { values: {}, max: 0 }
 };
 let sourcesChart = null;
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'short' });
+const REPEATED_ALERT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Utility functions
 function normalizeString(value) {
@@ -88,9 +90,12 @@ function setDatalistOptions(id, options) {
     datalist.innerHTML = options.map(option => `<option value="${option}"></option>`).join('');
 }
 
-function formatDate(dateString) {
+function formatDateTime(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleString('cs-CZ');
+    if (Number.isNaN(date.getTime())) {
+        return '-';
+    }
+    return DATE_TIME_FORMATTER.format(date);
 }
 
 function formatRelativeTime(dateString) {
@@ -461,23 +466,56 @@ async function loadAlerts() {
     }
 }
 
+function getRepeatedAlertIds(alerts) {
+    const groups = new Map();
+
+    alerts.forEach(alert => {
+        const scenario = alert.scenario || '';
+        const sourceIp = alert.source_ip || '';
+        const createdAt = new Date(alert.created_at);
+        if (!scenario || !sourceIp || Number.isNaN(createdAt.getTime())) {
+            return;
+        }
+
+        const key = `${scenario}__${sourceIp}`;
+        const entry = groups.get(key) || { ids: [], min: createdAt, max: createdAt, count: 0 };
+        entry.ids.push(alert.id);
+        entry.count += 1;
+        if (createdAt < entry.min) entry.min = createdAt;
+        if (createdAt > entry.max) entry.max = createdAt;
+        groups.set(key, entry);
+    });
+
+    const repeatedIds = new Set();
+    groups.forEach(entry => {
+        if (entry.count > 1 && (entry.max - entry.min) >= REPEATED_ALERT_WINDOW_MS) {
+            entry.ids.forEach(id => repeatedIds.add(id));
+        }
+    });
+
+    return repeatedIds;
+}
+
 function renderAlerts() {
     const tbody = document.querySelector('#alertsTable tbody');
     if (!tbody) return;
 
     const filters = getAlertFilters();
+    const repeatedAlertIds = getRepeatedAlertIds(alertsData);
 
     const filtered = alertsData.filter(alert => {
         const scenarioValue = normalizeString(alert.scenario);
         const ipValue = normalizeString(alert.source_ip);
-        const countryValue = normalizeString(alert.source_country);
+        const machineValue = normalizeString(alert.machine_id);
         const decisionsCount = `${alert.decisions ? alert.decisions.length : 0}`;
+        const isRepeated = repeatedAlertIds.has(alert.id);
 
         return (
             matchesFilter(scenarioValue, filters.scenario) &&
             matchesFilter(ipValue, filters.ip) &&
-            matchesFilter(countryValue, filters.country) &&
-            matchesFilter(decisionsCount, filters.decisions)
+            matchesFilter(machineValue, filters.machine) &&
+            matchesFilter(decisionsCount, filters.decisions) &&
+            (!filters.repeatedOnly || isRepeated)
         );
     });
 
@@ -486,13 +524,9 @@ function renderAlerts() {
         let aValue = '';
         let bValue = '';
         switch (key) {
-            case 'id':
-                aValue = Number(a.id);
-                bValue = Number(b.id);
-                break;
             case 'created_at':
-                aValue = new Date(a.created_at).getTime();
-                bValue = new Date(b.created_at).getTime();
+                aValue = new Date(a.created_at).getTime() || 0;
+                bValue = new Date(b.created_at).getTime() || 0;
                 break;
             case 'scenario':
                 aValue = a.scenario || '';
@@ -530,15 +564,16 @@ function renderAlerts() {
         const flag = getCountryFlagHtml(alert.source_country);
         const scenarioLabel = alert.scenario?.split('/').pop() || '';
         const machineLabel = alert.machine_id || '-';
+        const isRepeated = repeatedAlertIds.has(alert.id);
+        const repeatedBadge = isRepeated ? '<span class="badge badge-repeated">Opakovaný</span>' : '';
 
         return `
-            <tr>
-                <td>${alert.id}</td>
-                <td>${formatRelativeTime(alert.created_at)}</td>
-                <td title="${alert.scenario}" data-filter-target="alertFilterScenario" data-filter-value="${alert.scenario}">${scenarioLabel}</td>
-                <td>${machineLabel}</td>
+            <tr class="${isRepeated ? 'alert-repeated' : ''}">
+                <td>${formatDateTime(alert.created_at)}</td>
+                <td title="${alert.scenario}" data-filter-target="alertFilterScenario" data-filter-value="${alert.scenario}">${scenarioLabel} ${repeatedBadge}</td>
+                <td data-filter-target="alertFilterMachine" data-filter-value="${alert.machine_id || ''}">${machineLabel}</td>
                 <td data-filter-target="alertFilterIp" data-filter-value="${alert.source_ip || ''}">${alert.source_ip || '-'}</td>
-                <td data-filter-target="alertFilterCountry" data-filter-value="${alert.source_country || ''}">${flag} ${alert.source_country || '-'}</td>
+                <td>${flag} ${alert.source_country || '-'}</td>
                 <td>${alert.events_count || 0}</td>
                 <td data-filter-target="alertFilterDecisions" data-filter-value="${decisionsCount}">${decisionsCount}</td>
                 <td>
@@ -590,7 +625,7 @@ function showAlertModal(alert) {
             </div>
             <div class="detail-item">
                 <label>Čas vytvoření</label>
-                <div class="value">${formatDate(alert.created_at)}</div>
+                <div class="value">${formatDateTime(alert.created_at)}</div>
             </div>
             <div class="detail-item">
                 <label>Počet událostí</label>
@@ -612,7 +647,7 @@ function showAlertModal(alert) {
                         <tr>
                             <td>${d.type}</td>
                             <td>${d.value}</td>
-                            <td>${formatDate(d.until)}</td>
+                            <td>${formatDateTime(d.until)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -644,22 +679,31 @@ function getAlertFilters() {
     return {
         scenario: normalizeString(document.getElementById('alertFilterScenario')?.value),
         ip: normalizeString(document.getElementById('alertFilterIp')?.value),
-        country: normalizeString(document.getElementById('alertFilterCountry')?.value),
-        decisions: normalizeString(document.getElementById('alertFilterDecisions')?.value)
+        machine: normalizeString(document.getElementById('alertFilterMachine')?.value),
+        decisions: normalizeString(document.getElementById('alertFilterDecisions')?.value),
+        repeatedOnly: document.getElementById('alertFilterRepeated')?.checked || false
     };
 }
 
 function updateAlertFilterOptions() {
     setDatalistOptions('alertScenarioList', uniqueValues(alertsData.map(alert => alert.scenario?.split('/').pop())));
     setDatalistOptions('alertIpList', uniqueValues(alertsData.map(alert => alert.source_ip)));
-    setDatalistOptions('alertCountryList', uniqueValues(alertsData.map(alert => alert.source_country)));
+    const machineOptions = uniqueValues(alertsData.map(alert => alert.machine_id));
+    const machineSelect = document.getElementById('alertFilterMachine');
+    if (machineSelect) {
+        machineSelect.innerHTML = '<option value="">Všechny machine</option>' + machineOptions.map(option => `
+            <option value="${option}">${option}</option>
+        `).join('');
+    }
 }
 
 function clearAlertFilters() {
-    const inputs = document.querySelectorAll('#alertFilterScenario, #alertFilterIp, #alertFilterCountry, #alertFilterDecisions');
+    const inputs = document.querySelectorAll('#alertFilterScenario, #alertFilterIp, #alertFilterMachine, #alertFilterDecisions');
     inputs.forEach(input => {
         if (input) input.value = '';
     });
+    const repeatedCheckbox = document.getElementById('alertFilterRepeated');
+    if (repeatedCheckbox) repeatedCheckbox.checked = false;
     renderAlerts();
 }
 
@@ -762,7 +806,7 @@ function renderDecisions() {
                 <td data-filter-target="decisionFilterType" data-filter-value="${decision.detail.type}">${decision.detail.type}</td>
                 <td title="${decision.scenario}" data-filter-target="decisionFilterScenario" data-filter-value="${decision.scenario}">${scenarioLabel}</td>
                 <td data-filter-target="decisionFilterCountry" data-filter-value="${decision.detail.country}">${flag} ${decision.detail.country}</td>
-                <td>${formatDate(decision.detail.expiration)}</td>
+                <td>${formatDateTime(decision.detail.expiration)}</td>
                 <td data-filter-target="decisionFilterStatus" data-filter-value="${statusLabel}">${statusBadge} ${duplicateBadge}</td>
                 <td>
                     ${!expired ? `<button class="btn btn-small btn-danger" onclick="deleteDecision(${decision.id})">Smazat</button>` : '-'}

@@ -53,7 +53,7 @@ try {
             WHERE a.created_at >= ?
             GROUP BY a.id
             ORDER BY a.created_at DESC
-            LIMIT 10000
+            LIMIT 100
         ");
 
         $stmt->execute([$since]);

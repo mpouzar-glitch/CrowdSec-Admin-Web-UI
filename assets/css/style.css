@@ -361,6 +361,24 @@ a {
     font-size: 13px;
 }
 
+.filter-group select {
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    font-size: 13px;
+}
+
+.filter-group.checkbox label {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+}
+
+.filter-group.checkbox input {
+    margin-right: 6px;
+}
+
 .filter-actions {
     display: flex;
     align-items: flex-end;
@@ -672,6 +690,11 @@ a {
     color: var(--warning);
 }
 
+.badge-repeated {
+    background: rgba(14, 165, 233, 0.15);
+    color: var(--primary);
+}
+
 .badge-muted {
     background: rgba(148, 163, 184, 0.15);
     color: var(--muted);
@@ -683,6 +706,10 @@ a {
     align-items: center;
     font-size: 14px;
     color: var(--muted);
+}
+
+.alert-repeated {
+    background: rgba(14, 165, 233, 0.06);
 }
 
 .form-grid {
