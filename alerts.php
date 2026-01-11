@@ -66,8 +66,7 @@ renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
                 <thead>
                     <tr>
                         <th data-sort-key="created_at">Čas <span class="sort-indicator"></span></th>
-                        <th data-sort-key="started_at">Start <span class="sort-indicator"></span></th>
-                        <th data-sort-key="stopped_at">Stop <span class="sort-indicator"></span></th>
+                        <th data-sort-key="duration">Trvání útoku <span class="sort-indicator"></span></th>
                         <th data-sort-key="scenario">Scénář <span class="sort-indicator"></span></th>
                         <th data-sort-key="machine">Machine <span class="sort-indicator"></span></th>
                         <th data-sort-key="source_ip">IP adresa <span class="sort-indicator"></span></th>
