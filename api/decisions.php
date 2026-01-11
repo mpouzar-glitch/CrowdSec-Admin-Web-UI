@@ -123,7 +123,15 @@ try {
 
         $api = new CrowdSecAPI();
         $result = $api->addDecision($ip, $type, $duration, $reason);
-        auditLog('decision.add', ['ip' => $ip, 'duration' => $duration, 'reason' => $reason, 'type' => $type]);
+        auditLog('decision.ban', [
+            'decision' => [
+                'value' => $ip,
+                'type' => $type,
+                'duration' => $duration,
+                'reason' => $reason
+            ],
+            'result' => $result
+        ]);
 
         jsonResponse(['message' => 'Decision added successfully', 'result' => $result]);
     }
@@ -132,9 +140,29 @@ try {
     elseif ($method === 'DELETE' && (isset($_GET['id']) || preg_match('#/api/decisions/(\d+)#', $uri, $matches))) {
         $id = $_GET['id'] ?? $matches[1];
 
+        $decisionDetails = null;
+        $stmt = $db->prepare("
+            SELECT
+                id,
+                scenario,
+                type,
+                value,
+                origin,
+                scope,
+                until,
+                created_at
+            FROM decisions
+            WHERE id = ?
+        ");
+        $stmt->execute([$id]);
+        $decisionDetails = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
         $api = new CrowdSecAPI();
         $api->deleteDecision($id);
-        auditLog('decision.delete', ['id' => $id]);
+        auditLog('decision.unban', [
+            'id' => $id,
+            'decision' => $decisionDetails
+        ]);
 
         jsonResponse(['message' => 'Decision deleted successfully']);
     }
