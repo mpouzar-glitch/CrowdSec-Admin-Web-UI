@@ -30,6 +30,7 @@ const dashboardState = {
     }
 };
 const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'medium', timeStyle: 'short' });
+const TIME_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { timeStyle: 'short' });
 
 // Utility functions
 function normalizeString(value) {
@@ -111,6 +112,38 @@ function formatDateTime(dateString) {
         return '-';
     }
     return DATE_TIME_FORMATTER.format(date);
+}
+
+function formatTime(dateString) {
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) {
+        return '-';
+    }
+    return TIME_FORMATTER.format(date);
+}
+
+function getAlertDurationMinutes(alert) {
+    if (!alert?.started_at || !alert?.stopped_at) return null;
+    const start = new Date(alert.started_at);
+    const stop = new Date(alert.stopped_at);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(stop.getTime())) return null;
+    const diffMs = Math.max(0, stop - start);
+    return diffMs / 60000;
+}
+
+function formatAlertDuration(alert) {
+    if (!alert?.started_at) return '-';
+    const startLabel = formatTime(alert.started_at);
+    if (startLabel === '-') return '-';
+    const durationMinutes = getAlertDurationMinutes(alert);
+    if (durationMinutes === null) {
+        return `start: ${startLabel} trvání -`;
+    }
+    const roundedMinutes = Math.round(durationMinutes);
+    const durationLabel = roundedMinutes >= 60
+        ? `${Math.max(1, Math.round(roundedMinutes / 60))} hod`
+        : `${Math.max(1, roundedMinutes)} min`;
+    return `start: ${startLabel} trvání ${durationLabel}`;
 }
 
 function formatRelativeTime(dateString) {
@@ -1068,13 +1101,9 @@ function renderAlerts() {
                 aValue = a.machine_id || '';
                 bValue = b.machine_id || '';
                 break;
-            case 'started_at':
-                aValue = new Date(a.started_at).getTime() || 0;
-                bValue = new Date(b.started_at).getTime() || 0;
-                break;
-            case 'stopped_at':
-                aValue = new Date(a.stopped_at).getTime() || 0;
-                bValue = new Date(b.stopped_at).getTime() || 0;
+            case 'duration':
+                aValue = getAlertDurationMinutes(a) ?? -1;
+                bValue = getAlertDurationMinutes(b) ?? -1;
                 break;
             case 'source_ip':
                 aValue = a.source_ip || '';
@@ -1107,12 +1136,12 @@ function renderAlerts() {
         const banIcon = hasActiveDecision ? 'fa-unlock' : 'fa-ban';
         const banClass = hasActiveDecision ? 'icon-btn-warning' : 'icon-btn-danger';
         const ipDisabled = !alert.source_ip;
+        const extendDisabled = ipDisabled || !hasActiveDecision;
 
         return `
             <tr class="${isRepeated ? 'alert-repeated' : ''}">
                 <td>${formatDateTime(alert.created_at)}</td>
-                <td>${alert.started_at ? formatDateTime(alert.started_at) : '-'}</td>
-                <td>${alert.stopped_at ? formatDateTime(alert.stopped_at) : '-'}</td>
+                <td>${formatAlertDuration(alert)}</td>
                 <td class="table-filter-link" title="${alert.scenario}" data-tooltip="Kliknutím přefiltrujete" data-filter-target="alertFilterScenario" data-filter-value="${alert.scenario}">${scenarioLabel} ${repeatedBadge}</td>
                 <td class="table-filter-link" data-tooltip="Kliknutím přefiltrujete" data-filter-target="alertFilterMachine" data-filter-value="${alert.machine_id || ''}">${machineLabel}</td>
                 <td class="table-filter-link" data-tooltip="Kliknutím přefiltrujete" data-filter-target="alertFilterIp" data-filter-value="${alert.source_ip || ''}">${alert.source_ip || '-'}</td>
@@ -1125,6 +1154,9 @@ function renderAlerts() {
                         </button>
                         <button class="icon-btn ${banClass}" onclick="toggleAlertDecision(${alert.id})" ${ipDisabled ? 'disabled' : ''} aria-label="${banLabel}" title="${banLabel}">
                             <i class="fa-solid ${banIcon}"></i>
+                        </button>
+                        <button class="icon-btn icon-btn-primary" onclick="extendAlertDecision(${alert.id})" ${extendDisabled ? 'disabled' : ''} aria-label="Prodloužit ban" title="Prodloužit ban">
+                            <i class="fa-solid fa-clock"></i>
                         </button>
                         <button class="icon-btn icon-btn-success" onclick="addAlertIpToWhitelist('${alert.source_ip || ''}')" ${ipDisabled ? 'disabled' : ''} aria-label="Whitelist" title="Whitelist">
                             <i class="fa-solid fa-shield"></i>
@@ -1335,6 +1367,15 @@ async function toggleAlertDecision(alertId) {
     } else {
         showLongTermBanModal(ip);
     }
+}
+
+function extendAlertDecision(alertId) {
+    const alert = findAlertById(alertId);
+    if (!alert) return;
+    const ip = alert.source_ip || '';
+    const activeDecisions = (alert.decisions || []).filter(decision => !decision.expired);
+    if (!ip || activeDecisions.length === 0) return;
+    showLongTermBanModal(ip, { reason: 'extend' });
 }
 
 async function addAlertIpToWhitelist(ip) {
@@ -1738,12 +1779,21 @@ function showAddDecisionModal() {
     modal.classList.add('active');
 }
 
-function showLongTermBanModal(ip) {
+function showLongTermBanModal(ip, options = {}) {
     const modal = document.getElementById('longTermBanModal');
     if (!modal) return;
     const ipInput = document.getElementById('longTermBanIp');
+    const durationSelect = document.getElementById('longTermBanDuration');
+    const reasonInput = document.getElementById('longTermBanReason');
     if (ipInput) {
         ipInput.value = ip || '';
+    }
+    if (durationSelect) {
+        const defaultDuration = durationSelect.querySelector('option[selected]')?.value || durationSelect.value;
+        durationSelect.value = options.duration || defaultDuration;
+    }
+    if (reasonInput) {
+        reasonInput.value = options.reason || reasonInput.defaultValue || 'manual';
     }
     modal.classList.add('active');
 }
