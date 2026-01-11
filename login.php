@@ -14,6 +14,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    $knownUser = false;
+    foreach (getAuthUsers() as $user) {
+        if ($user['username'] === $username) {
+            $knownUser = true;
+            break;
+        }
+    }
+    if ($knownUser) {
+        auditLog('login.failed', ['username' => $username, 'reason' => 'invalid_password'], $username);
+    }
+
     $error = 'Nesprávné přihlašovací údaje.';
 }
 ?>

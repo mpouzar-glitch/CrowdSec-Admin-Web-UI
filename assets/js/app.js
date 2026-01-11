@@ -962,8 +962,8 @@ function buildAlertQueryParams(filters) {
 
 function getAlertFilterParams() {
     return {
-        scenario: document.getElementById('alertFilterScenario')?.value?.trim() || '',
-        ip: document.getElementById('alertFilterIp')?.value?.trim() || '',
+        scenario: normalizeString(document.getElementById('alertFilterScenario')?.value),
+        ip: normalizeString(document.getElementById('alertFilterIp')?.value),
         machine: document.getElementById('alertFilterMachine')?.value?.trim() || '',
         country: document.getElementById('alertFilterCountry')?.value?.trim() || '',
         hasDecisionsOnly: document.getElementById('alertFilterHasDecisions')?.checked || false
@@ -1364,13 +1364,18 @@ function getMachineStatusBadge(machine) {
     let badgeClass = 'badge-muted';
     const heartbeat = machine.last_heartbeat ? new Date(machine.last_heartbeat) : null;
     const heartbeatValid = heartbeat && !Number.isNaN(heartbeat.getTime());
-    const isActive = heartbeatValid && (Date.now() - heartbeat.getTime()) <= 10 * 60 * 1000;
+    const isOnline = Boolean(machine.is_validated) && heartbeatValid && (Date.now() - heartbeat.getTime()) <= 120 * 1000;
 
-    if (!label) {
-        label = isActive ? 'Aktivní' : 'Neaktivní';
-    }
-    if (isActive || label.toLowerCase() === 'active') {
+    if (isOnline) {
+        label = 'Online';
         badgeClass = 'badge-active';
+    } else {
+        if (!label) {
+            label = 'Neaktivní';
+        }
+        if (label.toLowerCase() === 'active') {
+            badgeClass = 'badge-active';
+        }
     }
 
     const validationLabel = machine.is_validated ? 'Validováno' : 'Neověřeno';
