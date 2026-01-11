@@ -21,23 +21,30 @@ renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
 
     <section class="table-filters">
         <div class="filter-group">
-            <label for="alertFilterScenario">Scénář</label>
+            <label for="alertFilterScenario"><i class="fa-solid fa-layer-group"></i> Scénář</label>
             <input type="text" id="alertFilterScenario" data-filter-key="scenario" list="alertScenarioList" placeholder="např. ssh-bf">
             <datalist id="alertScenarioList"></datalist>
         </div>
         <div class="filter-group">
-            <label for="alertFilterIp">IP adresa</label>
+            <label for="alertFilterIp"><i class="fa-solid fa-network-wired"></i> IP adresa</label>
             <input type="text" id="alertFilterIp" data-filter-key="ip" list="alertIpList" placeholder="např. 192.168.1.1">
             <datalist id="alertIpList"></datalist>
         </div>
         <div class="filter-group">
-            <label for="alertFilterCountry">Země</label>
-            <input type="text" id="alertFilterCountry" data-filter-key="country" list="alertCountryList" placeholder="např. CZ">
-            <datalist id="alertCountryList"></datalist>
+            <label for="alertFilterMachine"><i class="fa-solid fa-server"></i> Machine</label>
+            <select id="alertFilterMachine" data-filter-key="machine">
+                <option value="">Všechny machine</option>
+            </select>
         </div>
         <div class="filter-group">
-            <label for="alertFilterDecisions">Rozhodnutí</label>
+            <label for="alertFilterDecisions"><i class="fa-solid fa-gavel"></i> Rozhodnutí</label>
             <input type="text" id="alertFilterDecisions" data-filter-key="decisions" placeholder="např. 1">
+        </div>
+        <div class="filter-group checkbox">
+            <label for="alertFilterRepeated">
+                <input type="checkbox" id="alertFilterRepeated" data-filter-key="repeated">
+                <i class="fa-solid fa-repeat"></i> Pouze opakující se alerty
+            </label>
         </div>
         <div class="filter-actions">
             <button class="btn btn-ghost" type="button" onclick="clearAlertFilters()">Vyčistit filtry</button>
@@ -49,7 +56,6 @@ renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
             <table class="data-table data-table-compact" id="alertsTable">
                 <thead>
                     <tr>
-                        <th data-sort-key="id">ID <span class="sort-indicator"></span></th>
                         <th data-sort-key="created_at">Čas <span class="sort-indicator"></span></th>
                         <th data-sort-key="scenario">Scénář <span class="sort-indicator"></span></th>
                         <th data-sort-key="machine">Machine <span class="sort-indicator"></span></th>
