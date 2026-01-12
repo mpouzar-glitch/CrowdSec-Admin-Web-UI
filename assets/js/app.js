@@ -33,6 +33,22 @@ const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'mediu
 const TIME_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { timeStyle: 'short' });
 
 // Utility functions
+function parseUtcDate(value) {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+
+    const stringValue = String(value).trim();
+    if (!stringValue) return null;
+    if (/^\d+$/.test(stringValue)) {
+        const date = new Date(Number(stringValue));
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(stringValue);
+    const date = new Date(hasTimezone ? stringValue : `${stringValue}Z`);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function normalizeString(value) {
     return (value ?? '').toString().toLowerCase().trim();
 }
@@ -107,16 +123,16 @@ function setDatalistOptions(id, options) {
 }
 
 function formatDateTime(dateString) {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) {
+    const date = parseUtcDate(dateString);
+    if (!date) {
         return '-';
     }
     return DATE_TIME_FORMATTER.format(date);
 }
 
 function formatTime(dateString) {
-    const date = new Date(dateString);
-    if (Number.isNaN(date.getTime())) {
+    const date = parseUtcDate(dateString);
+    if (!date) {
         return '-';
     }
     return TIME_FORMATTER.format(date);
@@ -124,9 +140,9 @@ function formatTime(dateString) {
 
 function getAlertDurationMinutes(alert) {
     if (!alert?.started_at || !alert?.stopped_at) return null;
-    const start = new Date(alert.started_at);
-    const stop = new Date(alert.stopped_at);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(stop.getTime())) return null;
+    const start = parseUtcDate(alert.started_at);
+    const stop = parseUtcDate(alert.stopped_at);
+    if (!start || !stop) return null;
     const diffMs = Math.max(0, stop - start);
     return diffMs / 60000;
 }
@@ -147,7 +163,10 @@ function formatAlertDuration(alert) {
 }
 
 function formatRelativeTime(dateString) {
-    const date = new Date(dateString);
+    const date = parseUtcDate(dateString);
+    if (!date) {
+        return '-';
+    }
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
@@ -176,8 +195,8 @@ function getAlertCountry(alert) {
 }
 
 function getAlertHourKey(alert) {
-    const date = new Date(alert.created_at);
-    if (Number.isNaN(date.getTime())) return null;
+    const date = parseUtcDate(alert.created_at);
+    if (!date) return null;
     date.setMinutes(0, 0, 0);
     return date.getTime();
 }
@@ -277,8 +296,8 @@ function buildTimelineData(alerts) {
     const buckets = new Map();
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     alerts.forEach(alert => {
-        const createdAt = new Date(alert.created_at);
-        if (Number.isNaN(createdAt.getTime()) || createdAt.getTime() < cutoff) return;
+        const createdAt = parseUtcDate(alert.created_at);
+        if (!createdAt || createdAt.getTime() < cutoff) return;
         const hourKey = getAlertHourKey(alert);
         if (hourKey === null) return;
         buckets.set(hourKey, (buckets.get(hourKey) || 0) + 1);
@@ -353,8 +372,8 @@ function getAlertCountry(alert) {
 }
 
 function getAlertHourKey(alert) {
-    const date = new Date(alert.created_at);
-    if (Number.isNaN(date.getTime())) return null;
+    const date = parseUtcDate(alert.created_at);
+    if (!date) return null;
     date.setMinutes(0, 0, 0);
     return date.getTime();
 }
@@ -439,8 +458,8 @@ function buildTimelineData(alerts) {
     const buckets = new Map();
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     alerts.forEach(alert => {
-        const createdAt = new Date(alert.created_at);
-        if (Number.isNaN(createdAt.getTime()) || createdAt.getTime() < cutoff) return;
+        const createdAt = parseUtcDate(alert.created_at);
+        if (!createdAt || createdAt.getTime() < cutoff) return;
         const hourKey = getAlertHourKey(alert);
         if (hourKey === null) return;
         buckets.set(hourKey, (buckets.get(hourKey) || 0) + 1);
@@ -460,8 +479,8 @@ function buildTimelineData(alerts) {
 
 function buildTimelineFromStats(rows) {
     return (rows || []).map(row => {
-        const date = new Date(row.hour);
-        const isValid = !Number.isNaN(date.getTime());
+        const date = parseUtcDate(row.hour);
+        const isValid = date && !Number.isNaN(date.getTime());
         const hourKey = isValid ? date.getTime() : row.hour;
         const label = isValid
             ? date.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })
@@ -1090,8 +1109,8 @@ function renderAlerts() {
         let bValue = '';
         switch (key) {
             case 'created_at':
-                aValue = new Date(a.created_at).getTime() || 0;
-                bValue = new Date(b.created_at).getTime() || 0;
+                aValue = parseUtcDate(a.created_at)?.getTime() || 0;
+                bValue = parseUtcDate(b.created_at)?.getTime() || 0;
                 break;
             case 'scenario':
                 aValue = a.scenario || '';
@@ -1656,8 +1675,8 @@ function renderDecisions() {
                 bValue = Number(b.id);
                 break;
             case 'created_at':
-                aValue = new Date(a.created_at).getTime();
-                bValue = new Date(b.created_at).getTime();
+                aValue = parseUtcDate(a.created_at)?.getTime();
+                bValue = parseUtcDate(b.created_at)?.getTime();
                 break;
             case 'value':
                 aValue = a.value || '';
@@ -1676,8 +1695,8 @@ function renderDecisions() {
                 bValue = b.detail.country || '';
                 break;
             case 'expiration':
-                aValue = new Date(a.detail.expiration).getTime();
-                bValue = new Date(b.detail.expiration).getTime();
+                aValue = parseUtcDate(a.detail.expiration)?.getTime();
+                bValue = parseUtcDate(b.detail.expiration)?.getTime();
                 break;
             case 'status':
                 aValue = a.expired ? 1 : 0;
@@ -1848,16 +1867,16 @@ function renderWhitelist() {
                 bValue = b.reason || '';
                 break;
             case 'expires_at':
-                aValue = a.expires_at ? new Date(a.expires_at).getTime() : null;
-                bValue = b.expires_at ? new Date(b.expires_at).getTime() : null;
+                aValue = a.expires_at ? parseUtcDate(a.expires_at)?.getTime() : null;
+                bValue = b.expires_at ? parseUtcDate(b.expires_at)?.getTime() : null;
                 break;
             case 'created_at':
-                aValue = a.created_at ? new Date(a.created_at).getTime() : null;
-                bValue = b.created_at ? new Date(b.created_at).getTime() : null;
+                aValue = a.created_at ? parseUtcDate(a.created_at)?.getTime() : null;
+                bValue = b.created_at ? parseUtcDate(b.created_at)?.getTime() : null;
                 break;
             case 'updated_at':
-                aValue = a.updated_at ? new Date(a.updated_at).getTime() : null;
-                bValue = b.updated_at ? new Date(b.updated_at).getTime() : null;
+                aValue = a.updated_at ? parseUtcDate(a.updated_at)?.getTime() : null;
+                bValue = b.updated_at ? parseUtcDate(b.updated_at)?.getTime() : null;
                 break;
             default:
                 aValue = a.id;
@@ -1953,7 +1972,7 @@ function getMachineStatusBadge(machine) {
     const statusText = (machine.status || '').trim();
     let label = statusText;
     let badgeClass = 'badge-muted';
-    const heartbeat = machine.last_heartbeat ? new Date(machine.last_heartbeat) : null;
+    const heartbeat = machine.last_heartbeat ? parseUtcDate(machine.last_heartbeat) : null;
     const heartbeatValid = heartbeat && !Number.isNaN(heartbeat.getTime());
     const isOnline = Boolean(machine.is_validated) && heartbeatValid && (Date.now() - heartbeat.getTime()) <= 120 * 1000;
 
@@ -1961,12 +1980,8 @@ function getMachineStatusBadge(machine) {
         label = 'Online';
         badgeClass = 'badge-active';
     } else {
-        if (!label) {
-            label = 'Neaktivní';
-        }
-        if (label.toLowerCase() === 'active') {
-            badgeClass = 'badge-active';
-        }
+        label = 'Offline';
+        badgeClass = 'badge-expired';
     }
 
     const validationLabel = machine.is_validated ? 'Validováno' : 'Neověřeno';
