@@ -4,8 +4,8 @@ require_once __DIR__ . '/../config/database.php';
 
 function fetchMenuBadgeCounts() {
     $counts = [
-        'alerts' => null,
-        'decisions' => null
+        'alerts' => 0,
+        'decisions' => 0
     ];
 
     try {
@@ -68,10 +68,10 @@ function renderPageStart($pageTitle, $activeMenu, $appTitle = 'CrowdSec Admin') 
     foreach ($menuItems as $key => $item) {
         $activeClass = $key === $activeMenu ? 'active' : '';
         $icon = $item['icon'] ?? 'fa-circle';
-        $pill = isset($item['pill']) ? (int) $item['pill'] : null;
+        $pill = isset($item['pill']) ? (int) $item['pill'] : 0;
         $pillClass = $item['pill_class'] ?? '';
         $pillMarkup = '';
-        if ($pill !== null) {
+        if (isset($item['pill'])) {
             $pillMarkup = "<span class=\"nav-pill {$pillClass}\">{$pill}</span>";
         }
         echo "                    <a class=\"nav-item {$activeClass}\" href=\"{$item['href']}\"><i class=\"fas {$icon}\"></i><span>{$item['label']}</span>{$pillMarkup}</a>\n";

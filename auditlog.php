@@ -87,7 +87,7 @@ function renderAuditDetails($details) {
             $label = htmlspecialchars(ucwords(str_replace('_', ' ', (string) $key)));
             $icon = auditDetailIcon($key);
             $formatted = formatAuditValue($value);
-            $items[] = "<li><span class=\"audit-detail-key\"><i class=\"fas {$icon}\"></i>{$label}</span><span class=\"audit-detail-value\">{$formatted}</span></li>";
+            $items[] = "<li><span class=\"audit-detail-key\"><i class=\"fas {$icon}\"></i>{$label}:</span><span class=\"audit-detail-value\">{$formatted}</span></li>";
         }
 
         return '<ul class="audit-detail-list">' . implode('', $items) . '</ul>';
