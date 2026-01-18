@@ -624,6 +624,262 @@ function buildQueryString($params = []) {
 }
 
 /**
+ * Build WHERE clause for quarantine message queries
+ *
+ * @param array $filters Current filters
+ * @param array $params Params passed by reference
+ * @return string SQL WHERE clause
+ */
+function buildQuarantineWhereClause(array $filters, array &$params): string {
+    $clauses = [];
+
+    $search = trim((string) ($filters['search'] ?? ''));
+    $action = trim((string) ($filters['action'] ?? ''));
+    $scoreMin = trim((string) ($filters['score_min'] ?? ''));
+    $scoreMax = trim((string) ($filters['score_max'] ?? ''));
+    $state = trim((string) ($filters['statefilter'] ?? ''));
+    $date = trim((string) ($filters['date'] ?? ''));
+    $sender = trim((string) ($filters['sender'] ?? ''));
+    $recipient = trim((string) ($filters['recipient'] ?? ''));
+    $ip = trim((string) ($filters['ip'] ?? ''));
+    $country = trim((string) ($filters['country'] ?? ''));
+    $authUser = trim((string) ($filters['auth_user'] ?? ''));
+    $virus = (string) ($filters['virus'] ?? '');
+    $badExtension = (string) ($filters['bad_extension'] ?? '');
+
+    if ($search !== '') {
+        $clauses[] = '(sender LIKE :search OR recipients LIKE :search OR subject LIKE :search OR hostname LIKE :search OR ip_address LIKE :search)';
+        $params[':search'] = '%' . $search . '%';
+    }
+
+    if ($action !== '') {
+        $clauses[] = 'action = :action';
+        $params[':action'] = $action;
+    }
+
+    if ($scoreMin !== '') {
+        $clauses[] = 'score >= :score_min';
+        $params[':score_min'] = (float) $scoreMin;
+    }
+
+    if ($scoreMax !== '') {
+        $clauses[] = 'score <= :score_max';
+        $params[':score_max'] = (float) $scoreMax;
+    }
+
+    if ($state !== '') {
+        $clauses[] = 'state = :state';
+        $params[':state'] = (int) $state;
+    }
+
+    if ($date !== '') {
+        $clauses[] = 'timestamp >= :date_from AND timestamp <= :date_to';
+        $params[':date_from'] = $date . ' 00:00:00';
+        $params[':date_to'] = $date . ' 23:59:59';
+    }
+
+    if ($sender !== '') {
+        $clauses[] = 'sender LIKE :sender';
+        $params[':sender'] = '%' . $sender . '%';
+    }
+
+    if ($recipient !== '') {
+        $clauses[] = 'recipients LIKE :recipient';
+        $params[':recipient'] = '%' . $recipient . '%';
+    }
+
+    if ($ip !== '') {
+        $clauses[] = 'ip_address LIKE :ip';
+        $params[':ip'] = '%' . $ip . '%';
+    }
+
+    if ($country !== '') {
+        $clauses[] = 'country = :country';
+        $params[':country'] = $country;
+    }
+
+    if ($authUser !== '') {
+        $clauses[] = 'auth_user LIKE :auth_user';
+        $params[':auth_user'] = '%' . $authUser . '%';
+    }
+
+    if ($virus !== '') {
+        $clauses[] = 'symbols LIKE :virus_symbol';
+        $params[':virus_symbol'] = '%VIRUS%';
+    }
+
+    if ($badExtension !== '') {
+        $clauses[] = '(symbols LIKE :bad_extension_symbol OR symbols LIKE :bad_attachment_symbol)';
+        $params[':bad_extension_symbol'] = '%BAD_EXTENSION%';
+        $params[':bad_attachment_symbol'] = '%BAD_ATTACHMENT%';
+    }
+
+    if (empty($clauses)) {
+        return '';
+    }
+
+    return 'WHERE ' . implode(' AND ', $clauses);
+}
+
+/**
+ * Fetch extended statistics for quarantine messages
+ *
+ * @param PDO $db Database connection
+ * @param array $filters Current filters
+ * @return array Statistics data
+ */
+function getExtendedQuarantineStats(PDO $db, array $filters = []): array {
+    $stats = [
+        'total' => 0,
+        'rejected' => 0,
+        'quarantined' => 0,
+        'learned_ham' => 0,
+        'learned_spam' => 0,
+        'released' => 0,
+        'avg_score' => 0,
+    ];
+
+    try {
+        $params = [];
+        $whereClause = buildQuarantineWhereClause($filters, $params);
+
+        $sql = "SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN LOWER(COALESCE(action, '')) IN ('reject', 'soft reject', 'soft_reject') THEN 1 ELSE 0 END) AS rejected,
+            SUM(CASE WHEN state = 0 THEN 1 ELSE 0 END) AS quarantined,
+            SUM(CASE WHEN state = 1 THEN 1 ELSE 0 END) AS learned_ham,
+            SUM(CASE WHEN state = 2 THEN 1 ELSE 0 END) AS learned_spam,
+            SUM(CASE WHEN state = 3 THEN 1 ELSE 0 END) AS released,
+            AVG(score) AS avg_score
+        FROM quarantine_messages
+        {$whereClause}";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($row) {
+            $stats['total'] = (int) ($row['total'] ?? 0);
+            $stats['rejected'] = (int) ($row['rejected'] ?? 0);
+            $stats['quarantined'] = (int) ($row['quarantined'] ?? 0);
+            $stats['learned_ham'] = (int) ($row['learned_ham'] ?? 0);
+            $stats['learned_spam'] = (int) ($row['learned_spam'] ?? 0);
+            $stats['released'] = (int) ($row['released'] ?? 0);
+            $stats['avg_score'] = $row['avg_score'] !== null ? (float) $row['avg_score'] : 0;
+        }
+    } catch (Throwable $e) {
+        error_log('Quarantine stats error: ' . $e->getMessage());
+    }
+
+    return $stats;
+}
+
+/**
+ * Render inline stats for quarantine pages
+ *
+ * @param array $stats Statistics data
+ * @param array $options Display options
+ * @return string HTML output
+ */
+function renderStatsInline(array $stats, array $options = []): string {
+    $opts = array_merge([
+        'show_total' => true,
+        'show_rejected' => false,
+        'show_quarantined' => false,
+        'show_learned_ham' => false,
+        'show_learned_spam' => false,
+        'show_released' => false,
+        'show_avg_score' => false,
+    ], $options);
+
+    $stats = array_merge([
+        'total' => 0,
+        'rejected' => 0,
+        'quarantined' => 0,
+        'learned_ham' => 0,
+        'learned_spam' => 0,
+        'released' => 0,
+        'avg_score' => 0,
+    ], $stats);
+
+    $resolveLabel = function (string $key, string $fallback): string {
+        $label = __($key);
+        return $label === $key ? $fallback : $label;
+    };
+
+    $items = [];
+
+    if ($opts['show_total']) {
+        $items[] = [
+            'label' => $resolveLabel('stats_total', 'Celkem'),
+            'value' => number_format($stats['total']),
+            'class' => 'total',
+        ];
+    }
+
+    if ($opts['show_rejected']) {
+        $items[] = [
+            'label' => $resolveLabel('action_reject', 'Zamítnuto'),
+            'value' => number_format($stats['rejected']),
+            'class' => 'reject',
+        ];
+    }
+
+    if ($opts['show_quarantined']) {
+        $items[] = [
+            'label' => $resolveLabel('state_quarantined', 'Karanténa'),
+            'value' => number_format($stats['quarantined']),
+            'class' => 'marked',
+        ];
+    }
+
+    if ($opts['show_learned_ham']) {
+        $items[] = [
+            'label' => $resolveLabel('state_learned_ham', 'Naučeno HAM'),
+            'value' => number_format($stats['learned_ham']),
+            'class' => '',
+        ];
+    }
+
+    if ($opts['show_learned_spam']) {
+        $items[] = [
+            'label' => $resolveLabel('state_learned_spam', 'Naučeno SPAM'),
+            'value' => number_format($stats['learned_spam']),
+            'class' => '',
+        ];
+    }
+
+    if ($opts['show_released']) {
+        $items[] = [
+            'label' => $resolveLabel('state_released', 'Propuštěno'),
+            'value' => number_format($stats['released']),
+            'class' => '',
+        ];
+    }
+
+    if ($opts['show_avg_score']) {
+        $items[] = [
+            'label' => $resolveLabel('stats_avg_score', 'Průměrné skóre'),
+            'value' => number_format($stats['avg_score'], 2),
+            'class' => 'score',
+        ];
+    }
+
+    ob_start();
+    ?>
+    <div class="stats-inline">
+        <?php foreach ($items as $item): ?>
+            <div class="stat-inline-item <?php echo htmlspecialchars(trim($item['class'])); ?>">
+                <span class="stat-inline-label"><?php echo htmlspecialchars($item['label']); ?></span>
+                <span class="stat-inline-value"><?php echo htmlspecialchars($item['value']); ?></span>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
  * Render stats cards for trace page
  * 
  * @param array $stats Statistics data
