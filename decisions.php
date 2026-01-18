@@ -354,19 +354,21 @@ renderPageStart($appTitle . ' - Decisions', 'decisions', $appTitle);
     <section class="card">
         <div class="card-body">
             <table class="data-table data-table-compact" id="decisionsTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Čas</th>
-                        <th>IP adresa</th>
-                        <th>Typ</th>
-                        <th>Scénář</th>
-                        <th>Země</th>
-                        <th>Expirace</th>
-                        <th>Status</th>
-                        <th>Akce</th>
-                    </tr>
-                </thead>
+                <?php
+                echo renderMessagesTableHeader([
+                    'columns' => [
+                        ['key' => 'id', 'label' => 'ID', 'sortable' => false],
+                        ['key' => 'created_at', 'label' => 'Čas', 'sortable' => false],
+                        ['key' => 'value', 'label' => 'IP adresa', 'sortable' => false],
+                        ['key' => 'type', 'label' => 'Typ', 'sortable' => false],
+                        ['key' => 'scenario', 'label' => 'Scénář', 'sortable' => false],
+                        ['key' => 'country', 'label' => 'Země', 'sortable' => false],
+                        ['key' => 'expiration', 'label' => 'Expirace', 'sortable' => false],
+                        ['key' => 'status', 'label' => 'Status', 'sortable' => false],
+                        ['key' => 'actions', 'label' => 'Akce', 'sortable' => false],
+                    ],
+                ]);
+                ?>
                 <tbody>
                     <?php if (empty($formatted)): ?>
                         <tr><td colspan="9" class="muted">Žádná data</td></tr>

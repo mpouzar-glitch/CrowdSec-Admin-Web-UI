@@ -229,6 +229,21 @@ function renderMessagesTableHeader(array $options = []) {
     ];
 
     $columnDefinitions = [
+        'created_at' => [
+            'label' => 'Čas',
+            'class' => 'col-timestamp',
+            'sort' => 'created_at',
+        ],
+        'started_at' => [
+            'label' => 'Začátek',
+            'class' => 'col-timestamp',
+            'sort' => 'started_at',
+        ],
+        'stopped_at' => [
+            'label' => 'Konec',
+            'class' => 'col-timestamp',
+            'sort' => 'stopped_at',
+        ],
         'timestamp' => [
             'label' => __('time'),
             'class' => 'col-timestamp',
@@ -254,6 +269,11 @@ function renderMessagesTableHeader(array $options = []) {
             'class' => 'col-action',
             'sort' => 'action',
         ],
+        'scenario' => [
+            'label' => 'Scénář',
+            'class' => 'col-scenario',
+            'sort' => 'scenario',
+        ],
         'score' => [
             'label' => __('msg_score'),
             'class' => 'col-score',
@@ -273,10 +293,49 @@ function renderMessagesTableHeader(array $options = []) {
             'label' => 'STATUS',
             'style' => 'width: 180px;',
         ],
+        'source_ip' => [
+            'label' => 'IP adresa',
+            'class' => 'col-ip',
+            'sort' => 'source_ip',
+        ],
+        'source_country' => [
+            'label' => 'Země',
+            'class' => 'col-country',
+            'sort' => 'source_country',
+        ],
+        'events_count' => [
+            'label' => 'Počet událostí',
+            'class' => 'col-count',
+            'sort' => 'events_count',
+        ],
+        'simulated' => [
+            'label' => 'Simulované',
+            'class' => 'col-boolean',
+        ],
         'ip_address' => [
             'label' => __('ip_address'),
             'class' => 'col-ip',
             'sort' => 'ip_address',
+        ],
+        'id' => [
+            'label' => 'ID',
+            'class' => 'col-id',
+        ],
+        'type' => [
+            'label' => 'Typ',
+            'class' => 'col-type',
+        ],
+        'country' => [
+            'label' => 'Země',
+            'class' => 'col-country',
+        ],
+        'expiration' => [
+            'label' => 'Expirace',
+            'class' => 'col-expiration',
+        ],
+        'value' => [
+            'label' => 'IP adresa',
+            'class' => 'col-ip',
         ],
         'hostname' => [
             'label' => __('hostname'),

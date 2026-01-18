@@ -242,19 +242,24 @@ $refreshUrl = $refreshQuery === '' ? '/alerts.php' : '/alerts.php?' . $refreshQu
 
         <section class="card">
             <table class="data-table data-table-compact alerts-table" id="alertsTable">
-                <thead>
-                    <tr>
-                        <th><a href="/alerts.php<?= htmlspecialchars($buildSortLink('created_at')) ?>">Čas <i class="fa-solid <?= $getSortIcon('created_at') ?>"></i></a></th>
-                        <th><a href="/alerts.php<?= htmlspecialchars($buildSortLink('started_at')) ?>">Začátek <i class="fa-solid <?= $getSortIcon('started_at') ?>"></i></a></th>
-                        <th><a href="/alerts.php<?= htmlspecialchars($buildSortLink('stopped_at')) ?>">Konec <i class="fa-solid <?= $getSortIcon('stopped_at') ?>"></i></a></th>
-                        <th><a href="/alerts.php<?= htmlspecialchars($buildSortLink('scenario')) ?>">Scénář <i class="fa-solid <?= $getSortIcon('scenario') ?>"></i></a></th>
-                        <th><a href="/alerts.php<?= htmlspecialchars($buildSortLink('source_ip')) ?>">IP adresa <i class="fa-solid <?= $getSortIcon('source_ip') ?>"></i></a></th>
-                        <th><a href="/alerts.php<?= htmlspecialchars($buildSortLink('source_country')) ?>">Země <i class="fa-solid <?= $getSortIcon('source_country') ?>"></i></a></th>
-                        <th><a href="/alerts.php<?= htmlspecialchars($buildSortLink('events_count')) ?>">Počet událostí <i class="fa-solid <?= $getSortIcon('events_count') ?>"></i></a></th>
-                        <th>Simulované</th>
-                        <th>Akce</th>
-                    </tr>
-                </thead>
+                <?php
+                echo renderMessagesTableHeader([
+                    'sort' => $sort,
+                    'buildSortLink' => fn(string $column) => '/alerts.php' . $buildSortLink($column),
+                    'getSortIcon' => $getSortIcon,
+                    'columns' => [
+                        'created_at',
+                        'started_at',
+                        'stopped_at',
+                        'scenario',
+                        'source_ip',
+                        'source_country',
+                        'events_count',
+                        ['key' => 'simulated', 'sortable' => false],
+                        ['key' => 'actions', 'label' => 'Akce', 'sortable' => false],
+                    ],
+                ]);
+                ?>
                 <tbody>
                     <?php if (empty($alerts)): ?>
                         <tr><td colspan="9" class="muted">Žádná data</td></tr>
