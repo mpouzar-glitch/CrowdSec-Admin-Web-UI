@@ -1179,7 +1179,7 @@ function renderAlerts() {
                 <td>${alert.events_count || 0}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="icon-btn icon-btn-primary" onclick="viewAlert(${alert.id})" aria-label="Detail" title="Detail">
+                        <button class="icon-btn icon-btn-primary" onclick="void viewAlert(${alert.id})" aria-label="Detail" title="Detail">
                             <i class="fa-solid fa-eye"></i>
                         </button>
                         <button class="icon-btn ${banClass}" onclick="toggleAlertDecision(${alert.id})" ${ipDisabled ? 'disabled' : ''} aria-label="${banLabel}" title="${banLabel}">

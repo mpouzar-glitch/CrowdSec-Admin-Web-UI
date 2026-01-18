@@ -256,7 +256,7 @@ renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
                                 <td><?= (int) $alert['simulated'] === 1 ? 'Ano' : 'Ne' ?></td>
                                 <td>
                                     <div class="table-actions">
-                                        <button type="button" class="icon-btn icon-btn-primary" onclick="viewAlert(<?= $alertId ?>)" aria-label="Detail" title="Detail">
+                                        <button type="button" class="icon-btn icon-btn-primary" onclick="void viewAlert(<?= $alertId ?>)" aria-label="Detail" title="Detail">
                                             <i class="fa-solid fa-eye"></i>
                                         </button>
                                         <button type="button" class="icon-btn <?= $banClass ?>" onclick="toggleAlertDecision(<?= $alertId ?>)" <?= $ipDisabled ? 'disabled' : '' ?> aria-label="<?= htmlspecialchars($banLabel) ?>" title="<?= htmlspecialchars($banLabel) ?>">
