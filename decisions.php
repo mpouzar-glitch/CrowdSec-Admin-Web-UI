@@ -4,6 +4,7 @@ require_once __DIR__ . '/includes/layout.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/api_client.php';
 require_once __DIR__ . '/includes/audit.php';
+require_once __DIR__ . '/includes/filter_helper.php';
 
 requireLogin();
 
@@ -113,25 +114,34 @@ try {
         $conditions[] = 'd.until > NOW()';
     }
 
-    if ($filters['value'] !== '') {
-        $conditions[] = 'LOWER(d.value) LIKE :value';
-        $params[':value'] = '%' . strtolower($filters['value']) . '%';
-    }
+    $filterDefinitions = [
+        [
+            'key' => 'value',
+            'column' => 'd.value',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'scenario',
+            'column' => 'd.scenario',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'type',
+            'column' => 'd.type',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'country',
+            'column' => 'a.source_country',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+    ];
 
-    if ($filters['scenario'] !== '') {
-        $conditions[] = 'LOWER(d.scenario) LIKE :scenario';
-        $params[':scenario'] = '%' . strtolower($filters['scenario']) . '%';
-    }
-
-    if ($filters['type'] !== '') {
-        $conditions[] = 'LOWER(d.type) LIKE :type';
-        $params[':type'] = '%' . strtolower($filters['type']) . '%';
-    }
-
-    if ($filters['country'] !== '') {
-        $conditions[] = 'LOWER(a.source_country) LIKE :country';
-        $params[':country'] = '%' . strtolower($filters['country']) . '%';
-    }
+    $conditions = array_merge($conditions, buildFilterConditions($filters, $filterDefinitions, $params));
 
     $statusFilter = strtolower($filters['status']);
     if ($statusFilter !== '') {
@@ -142,10 +152,7 @@ try {
         }
     }
 
-    $whereSql = '';
-    if (!empty($conditions)) {
-        $whereSql = 'WHERE ' . implode(' AND ', $conditions);
-    }
+    $whereSql = buildWhereClause($conditions);
 
     $stmt = $db->prepare("
         SELECT
@@ -234,11 +241,7 @@ $buildQuery = function (array $overrides = []) use ($filters, $perPage) {
         'per_page' => $perPage
     ], $overrides);
 
-    $query = array_filter($query, function ($value) {
-        return $value !== null && $value !== '';
-    });
-
-    return http_build_query($query);
+    return buildQueryString($query);
 };
 
 renderPageStart($appTitle . ' - Decisions', 'decisions', $appTitle);

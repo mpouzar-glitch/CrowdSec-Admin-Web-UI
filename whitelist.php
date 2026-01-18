@@ -3,6 +3,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/layout.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/audit.php';
+require_once __DIR__ . '/includes/filter_helper.php';
 
 requireLogin();
 
@@ -305,25 +306,29 @@ try {
     $conditions = [];
     $params = [];
 
-    if ($filters['cidr'] !== '') {
-        $conditions[] = 'LOWER(i.value) LIKE :cidr';
-        $params[':cidr'] = '%' . strtolower($filters['cidr']) . '%';
-    }
+    $filterDefinitions = [
+        [
+            'key' => 'cidr',
+            'column' => 'i.value',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'reason',
+            'column' => 'i.comment',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'list',
+            'column' => 'l.name',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+    ];
 
-    if ($filters['reason'] !== '') {
-        $conditions[] = 'LOWER(i.comment) LIKE :reason';
-        $params[':reason'] = '%' . strtolower($filters['reason']) . '%';
-    }
-
-    if ($filters['list'] !== '') {
-        $conditions[] = 'LOWER(l.name) LIKE :list';
-        $params[':list'] = '%' . strtolower($filters['list']) . '%';
-    }
-
-    $whereSql = '';
-    if (!empty($conditions)) {
-        $whereSql = 'WHERE ' . implode(' AND ', $conditions);
-    }
+    $conditions = array_merge($conditions, buildFilterConditions($filters, $filterDefinitions, $params));
+    $whereSql = buildWhereClause($conditions);
 
     $countStmt = $db->prepare("
         SELECT COUNT(*)
@@ -376,11 +381,7 @@ $buildQuery = function (array $overrides = []) use ($filters, $perPage) {
         'per_page' => $perPage
     ], $overrides);
 
-    $query = array_filter($query, function ($value) {
-        return $value !== null && $value !== '';
-    });
-
-    return http_build_query($query);
+    return buildQueryString($query);
 };
 
 renderPageStart($appTitle . ' - Whitelist', 'whitelist', $appTitle);

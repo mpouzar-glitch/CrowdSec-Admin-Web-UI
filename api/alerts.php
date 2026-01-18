@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/api_client.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/sql_helper.php';
 
 requireLogin();
 
@@ -16,34 +17,45 @@ $since = date('Y-m-d H:i:s', (time() * 1000 - $lookbackMs) / 1000);
 $repeatedWindowSeconds = 5 * 60;
 
 function buildAlertFilters($since) {
-    $conditions = ['a.created_at >= ?'];
-    $params = [$since];
+    $filters = [
+        'scenario' => trim((string) ($_GET['scenario'] ?? '')),
+        'ip' => trim((string) ($_GET['ip'] ?? '')),
+        'machine' => trim((string) ($_GET['machine'] ?? '')),
+        'country' => trim((string) ($_GET['country'] ?? ''))
+    ];
 
-    $scenario = strtolower(trim($_GET['scenario'] ?? ''));
-    if ($scenario !== '') {
-        $conditions[] = 'LOWER(a.scenario) LIKE ?';
-        $params[] = '%' . $scenario . '%';
-    }
+    $params = [':since' => $since];
+    $conditions = ['a.created_at >= :since'];
 
-    $ip = strtolower(trim($_GET['ip'] ?? ''));
-    if ($ip !== '') {
-        $conditions[] = 'LOWER(a.source_ip) LIKE ?';
-        $params[] = '%' . $ip . '%';
-    }
+    $definitions = [
+        [
+            'key' => 'scenario',
+            'column' => 'a.scenario',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'ip',
+            'column' => 'a.source_ip',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'machine',
+            'column' => 'm.machine_id',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+        [
+            'key' => 'country',
+            'column' => 'a.source_country',
+            'operator' => 'like',
+            'lowercase' => true
+        ],
+    ];
 
-    $machine = strtolower(trim($_GET['machine'] ?? ''));
-    if ($machine !== '') {
-        $conditions[] = 'LOWER(m.machine_id) LIKE ?';
-        $params[] = '%' . $machine . '%';
-    }
-
-    $country = strtolower(trim($_GET['country'] ?? ''));
-    if ($country !== '') {
-        $conditions[] = 'LOWER(a.source_country) LIKE ?';
-        $params[] = '%' . $country . '%';
-    }
-
-    $whereSql = 'WHERE ' . implode(' AND ', $conditions);
+    $conditions = array_merge($conditions, buildFilterConditions($filters, $definitions, $params));
+    $whereSql = buildWhereClause($conditions);
 
     return [$whereSql, $params];
 }
@@ -113,11 +125,8 @@ function getAlertSort() {
     ];
 
     $key = trim((string) ($_GET['sort'] ?? 'created_at'));
-    $directionRaw = strtolower(trim((string) ($_GET['direction'] ?? 'desc')));
-    $direction = $directionRaw === 'asc' ? 'ASC' : 'DESC';
-    $orderBy = $allowed[$key] ?? $allowed['created_at'];
-
-    return [$orderBy, $direction];
+    $directionRaw = trim((string) ($_GET['direction'] ?? 'desc'));
+    return buildSortConfig($key, $directionRaw, $allowed, 'created_at');
 }
 
 function decodeEventSerialized($serialized) {
@@ -251,7 +260,7 @@ try {
         [$whereSql, $params] = buildAlertFilters($since);
         $limit = getAlertLimit();
         $limitSql = $limit ? 'LIMIT ' . (int) $limit : '';
-        [$orderBy, $direction] = getAlertSort();
+        $sortConfig = getAlertSort();
         $stmt = $db->prepare("
             SELECT 
                 a.id,
@@ -284,17 +293,17 @@ try {
                 WHERE scenario IS NOT NULL AND source_ip IS NOT NULL
                 GROUP BY scenario, source_ip
                 HAVING COUNT(*) > 1
-                   AND TIMESTAMPDIFF(SECOND, MIN(created_at), MAX(created_at)) >= ?
+                   AND TIMESTAMPDIFF(SECOND, MIN(created_at), MAX(created_at)) >= :repeated_window
             ) repeated
                 ON repeated.scenario = a.scenario
                 AND repeated.source_ip = a.source_ip
             {$whereSql}
             GROUP BY a.id
-            ORDER BY {$orderBy} {$direction}, a.created_at DESC
+            ORDER BY {$sortConfig['order_by']}, a.created_at DESC
             {$limitSql}
         ");
 
-        $stmt->execute(array_merge([$repeatedWindowSeconds], $params));
+        $stmt->execute(array_merge([':repeated_window' => $repeatedWindowSeconds], $params));
         $alerts = $stmt->fetchAll();
 
         // Enrich with decisions
