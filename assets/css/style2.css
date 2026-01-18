@@ -26,24 +26,6 @@ body {
 .container {
     max-width: 1700px;
     margin: 0 auto;
-    padding: 20px;
-}
-
-.page-header {
-    margin-bottom: 20px;
-}
-
-.page-header h1 {
-    font-size: 28px;
-    font-weight: 600;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.page-header h1 i {
-    color: #3498db;
 }
 
 /* ===== CARDS ===== */
@@ -1359,34 +1341,6 @@ tr.selected {
     color: #999;
     font-size: 12px;
 }
-
-
-/* ========================================================================
-   PAGE HEADER ENHANCEMENTS
-   ======================================================================== */
-
-.page-header {
-    margin-bottom: 30px;
-}
-
-.page-header h1 {
-    margin: 0 0 10px 0;
-    color: #2c3e50;
-    font-size: 28px;
-    font-weight: 600;
-}
-
-.page-header h1 i {
-    margin-right: 10px;
-    color: #3498db;
-}
-
-.page-description {
-    margin: 0;
-    color: #7f8c8d;
-    font-size: 14px;
-}
-
 
 /* ========================================================================
    EMPTY STATE

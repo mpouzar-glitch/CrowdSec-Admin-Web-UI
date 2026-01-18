@@ -88,9 +88,9 @@ function renderPageStart($pageTitle, $activeMenu, $appTitle = 'CrowdSec Admin') 
     echo "            </div>\n";
     echo "        </nav>\n";
     echo "        <div class=\"app-content\">\n";
-    echo "            <header class=\"topbar\">\n";
-    echo "                <div class=\"topbar-title\">{$pageTitle}</div>\n";
-    echo "            </header>\n";
+    //echo "            <header class=\"topbar\">\n";
+    //echo "                <div class=\"topbar-title\">{$pageTitle}</div>\n";
+    //echo "            </header>\n";
     echo "            <main class=\"page\">\n";
 }
 

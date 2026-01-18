@@ -224,8 +224,9 @@ a {
     color: var(--muted);
 }
 
+
+
 .page {
-    padding: 32px;
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -405,6 +406,7 @@ a {
     font-weight: 700;
     position: relative;
     padding-left: 14px;
+    margin: 0; /* Odstraní výchozí margin */
 }
 
 .page-header h1::before {
@@ -417,6 +419,15 @@ a {
     height: 22px;
     border-radius: 999px;
     background: var(--primary);
+}
+.page-header div {
+  display: flex;
+  align-items: center; /* Vertikální zarovnání na střed */
+  gap: 15px; /* Mezera mezi h1 a p */
+}
+
+.page-header p {
+  margin: 0; /* Odstraní výchozí margin */
 }
 
 .muted {

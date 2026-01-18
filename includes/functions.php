@@ -1,4 +1,18 @@
 <?php
+
+// PHP 8.4 null safety helpers
+if (!function_exists('safe_strtotime')) {
+    function safe_strtotime($datetime) {
+        return $datetime ? strtotime($datetime) : time();
+    }
+}
+
+if (!function_exists('safe_html')) {
+    function safe_html($string) {
+        return htmlspecialchars($string ?? '', ENT_QUOTES, 'UTF-8');
+    }
+}
+
 function parseLookbackToMs($lookbackPeriod) {
     if (preg_match('/^(\d+)([hmd])$/', $lookbackPeriod, $match)) {
         $val = (int)$match[1];

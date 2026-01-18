@@ -272,10 +272,6 @@ $refreshUrl = $refreshQuery === '' ? '/alerts.php' : '/alerts.php?' . $refreshQu
                 <h1>Alerty</h1>
                 <p class="muted">Přehled všech incidentů v CrowdSec. Celkem <strong><?= $totalItems ?></strong> alertů.</p>
             </div>
-            <div class="toolbar">
-                <a class="btn btn-primary" href="<?= htmlspecialchars($refreshUrl) ?>">Obnovit</a>
-                <a class="btn btn-secondary" href="/alerts.php?reset_filters=1">Reset filtrů</a>
-            </div>
         </section>
 
         <?= renderSearchFilters($filterDefinitions) ?>
