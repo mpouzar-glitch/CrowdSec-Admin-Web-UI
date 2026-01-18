@@ -11,7 +11,7 @@ $appTitle = $env['APP_TITLE'] ?? 'CrowdSec Admin';
 $userRole = $_SESSION['user_role'] ?? 'viewer';
 $user = $_SESSION['username'] ?? 'unknown';
 
-$filterSessionKey = 'alerts_filters';
+$filterSessionKey = 'alertsfilters';
 initFilterSession($filterSessionKey);
 
 $sortableColumns = [
@@ -29,7 +29,7 @@ $sortDir = $_GET['dir'] ?? 'desc';
 $sortConfig = buildAlertsSort($sort, $sortDir, $sortableColumns);
 $sort = $sortConfig['sort'];
 $sortDir = $sortConfig['dir'];
-$orderBy = $sortConfig['order_by'];
+$orderBy = $sortConfig['orderby'];
 
 $getSortIcon = function (string $column) use ($sort, $sortDir): string {
     if ($sort !== $column) {
@@ -42,8 +42,8 @@ $filters = [
     'ip' => trim((string) getFilterValue('ip', $filterSessionKey)),
     'scenario' => trim((string) getFilterValue('scenario', $filterSessionKey)),
     'country' => trim((string) getFilterValue('country', $filterSessionKey)),
-    'date_from' => trim((string) getFilterValue('date_from', $filterSessionKey)),
-    'date_to' => trim((string) getFilterValue('date_to', $filterSessionKey)),
+    'datefrom' => trim((string) getFilterValue('datefrom', $filterSessionKey)),
+    'dateto' => trim((string) getFilterValue('dateto', $filterSessionKey)),
     'simulated' => (string) getFilterValue('simulated', $filterSessionKey)
 ];
 
@@ -51,8 +51,6 @@ $params = [];
 
 $page = isset($_GET['page']) ? max(1, (int) $_GET['page']) : 1;
 $offset = ($page - 1) * $appEnv['ITEMS_PER_PAGE'];
-
-$whereClause = buildAlertsWhereClause($filters, $params);
 
 $alerts = [];
 $totalItems = 0;
@@ -69,61 +67,23 @@ $stats = [
 try {
     $db = Database::getInstance()->getConnection();
 
-    $countSql = "SELECT COUNT(*) as total FROM alerts {$whereClause}";
-    $countStmt = $db->prepare($countSql);
-    $countStmt->execute($params);
-    $totalItems = (int) $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+    $totalItems = countAlerts($db, $filters);
     $totalPages = max(1, (int) ceil($totalItems / $appEnv['ITEMS_PER_PAGE']));
     $page = min($page, $totalPages);
     $offset = ($page - 1) * $appEnv['ITEMS_PER_PAGE'];
 
-    $sql = "SELECT * FROM alerts
-        {$whereClause}
-        ORDER BY {$orderBy}
-        LIMIT :limit OFFSET :offset";
-
+    $params = [];
+    $sql = buildAlertsQuery($filters, $params, [
+        'orderby' => $orderBy,
+        'limit' => $appEnv['ITEMS_PER_PAGE'],
+        'offset' => $offset,
+    ]);
     $stmt = $db->prepare($sql);
-    foreach ($params as $key => $value) {
-        $stmt->bindValue($key, $value);
-    }
-    $stmt->bindValue(':limit', $appEnv['ITEMS_PER_PAGE'], PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
+    $stmt->execute($params);
     $alerts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $activeDecisions = [];
-    if (!empty($alerts)) {
-        $alertIds = array_map('intval', array_column($alerts, 'id'));
-        $placeholders = implode(',', array_fill(0, count($alertIds), '?'));
-        $decisionStmt = $db->prepare("
-            SELECT id, alert_decisions, `until`
-            FROM decisions
-            WHERE alert_decisions IN ($placeholders)
-              AND `until` > NOW()
-            ORDER BY `until` DESC
-        ");
-        $decisionStmt->execute($alertIds);
-        $decisions = $decisionStmt->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($decisions as $decision) {
-            $alertId = (int) $decision['alert_decisions'];
-            if (!isset($activeDecisions[$alertId])) {
-                $activeDecisions[$alertId] = (int) $decision['id'];
-            }
-        }
-    }
-
-    $statsSql = "SELECT
-        COUNT(*) as total_alerts,
-        COUNT(DISTINCT source_ip) as unique_ips,
-        COUNT(DISTINCT scenario) as unique_scenarios,
-        SUM(events_count) as total_events,
-        COUNT(CASE WHEN simulated = 1 THEN 1 END) as simulated_alerts
-        FROM alerts {$whereClause}";
-
-    $statsStmt = $db->prepare($statsSql);
-    $statsStmt->execute($params);
-    $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+    $activeDecisions = getActiveDecisionsForAlerts($db, array_map('intval', array_column($alerts, 'id')));
+    $stats = getAlertsStats($db, $filters);
 } catch (Exception $e) {
     error_log('Alerts page error: ' . $e->getMessage());
 }
@@ -132,8 +92,8 @@ $filterQuery = array_filter([
     'scenario' => $filters['scenario'],
     'ip' => $filters['ip'],
     'country' => $filters['country'],
-    'date_from' => $filters['date_from'],
-    'date_to' => $filters['date_to'],
+    'datefrom' => $filters['datefrom'],
+    'dateto' => $filters['dateto'],
     'simulated' => $filters['simulated'],
 ]);
 
@@ -179,20 +139,20 @@ $filterDefinitions = [
         'max_width' => 80,
     ],
     'date_from' => [
-        'key' => 'date_from',
+        'key' => 'datefrom',
         'type' => 'date',
         'label' => 'Datum od',
         'icon' => 'fas fa-calendar',
-        'value' => $filters['date_from'],
+        'value' => $filters['datefrom'],
         'class' => 'filter-group',
         'max_width' => 160,
     ],
     'date_to' => [
-        'key' => 'date_to',
+        'key' => 'dateto',
         'type' => 'date',
         'label' => 'Datum do',
         'icon' => 'fas fa-calendar',
-        'value' => $filters['date_to'],
+        'value' => $filters['dateto'],
         'class' => 'filter-group',
         'max_width' => 160,
     ],
