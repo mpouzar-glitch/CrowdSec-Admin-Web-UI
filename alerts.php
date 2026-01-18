@@ -1,8 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/layout.php';
-require_once __DIR__ . '/functions2.php';
-require_once __DIR__ . '/filter_helper.php';
+require_once __DIR__ . '/includes/filter_helper.php';
 
 requireLogin();
 
