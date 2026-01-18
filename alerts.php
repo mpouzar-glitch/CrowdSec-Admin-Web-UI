@@ -137,7 +137,7 @@ $filterQuery = array_filter([
     'simulated' => $filters['simulated'],
 ]);
 
-$buildSortLink = function (string $column) use ($sort, $sortDir, $filterQuery): string {
+$buildQuery = function (string $column) use ($sort, $sortDir, $filterQuery): string {
     $nextDir = ($sort === $column && $sortDir === 'asc') ? 'desc' : 'asc';
     $params = array_merge($filterQuery, [
         'sort' => $column,
@@ -145,15 +145,6 @@ $buildSortLink = function (string $column) use ($sort, $sortDir, $filterQuery): 
         'page' => 1
     ]);
     return '?' . buildQueryString($params);
-};
-
-$buildQuery = function (array $overrides = []) use ($filterQuery, $sort, $sortDir) {
-    $query = array_merge($filterQuery, [
-        'sort' => $sort,
-        'dir' => $sortDir
-    ], $overrides);
-
-    return buildQueryString($query);
 };
 
 $filterDefinitions = [
@@ -226,8 +217,8 @@ $filterDefinitions = [
 ];
 
 renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
-$refreshQuery = $buildQuery();
-$refreshUrl = $refreshQuery === '' ? '/alerts.php' : '/alerts.php?' . $refreshQuery;
+//$refreshQuery = $buildQuery();
+//$refreshUrl = $refreshQuery === '' ? '/alerts.php' : '/alerts.php?' . $refreshQuery;
 ?>
     <div class="container">
         <section class="page-header">
@@ -244,7 +235,7 @@ $refreshUrl = $refreshQuery === '' ? '/alerts.php' : '/alerts.php?' . $refreshQu
                 <?php
                 echo renderMessagesTableHeader([
                     'sort' => $sort,
-                    'buildSortLink' => fn(string $column) => '/alerts.php' . $buildSortLink($column),
+                    'buildSortLink' => fn(string $column) => '/alerts.php' . $buildQuery($column),
                     'getSortIcon' => $getSortIcon,
                     'columns' => [
                         'created_at',
@@ -277,6 +268,15 @@ $refreshUrl = $refreshQuery === '' ? '/alerts.php' : '/alerts.php?' . $refreshQu
                             $createdAt = formatDateTime($alert['created_at'], '-');
                             $startedAt = formatDateTime($alert['started_at'], '-');
                             $stoppedAt = formatDateTime($alert['stopped_at'], '-');
+                            $countryCode = strtolower( $alert['source_country']);
+                            $countryTitle = $countryCode !== '' ? strtoupper($countryCode) : '-';
+                            $countryLink = $countryCode !== ''
+                                ? '?' . buildQueryString(array_merge($filters, ['country' => $countryCode, 'page' => 1]))
+                                : '';
+                            $flag = $countryCode !== ''
+                                ? '<span class="fi fi-' . htmlspecialchars($countryCode) . '" title="' . htmlspecialchars($countryTitle) . '"></span>'
+                                : '-';
+
                             ?>
                             <tr data-alert-id="<?= $alertId ?>" data-decision-id="<?= $decisionId ? (int) $decisionId : '' ?>" data-source-ip="<?= safe_html($sourceIp) ?>">
                                 <td><?= safe_html($createdAt) ?></td>
@@ -284,7 +284,15 @@ $refreshUrl = $refreshQuery === '' ? '/alerts.php' : '/alerts.php?' . $refreshQu
                                 <td><?= safe_html($stoppedAt) ?></td>
                                 <td><?= safe_html((string) $alert['scenario']) ?></td>
                                 <td><?= safe_html((string) ($alert['source_ip'] ?? '-')) ?></td>
-                                <td><?= safe_html((string) ($alert['source_country'] ?? '-')) ?></td>
+                                <td class="text-center">
+                                    <?php if ($countryLink !== ''): ?>
+                                        <a href="<?php echo htmlspecialchars($countryLink); ?>" class="country-link" title="<?php echo htmlspecialchars(__('filter_by_country', ['country' => $countryTitle])); ?>">
+                                            <?php echo $flag; ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <?php echo $flag; ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= (int) $alert['events_count'] ?></td>
                                 <td><?= (int) $alert['simulated'] === 1 ? 'Ano' : 'Ne' ?></td>
                                 <td>
