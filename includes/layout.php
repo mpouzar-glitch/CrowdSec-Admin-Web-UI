@@ -49,7 +49,7 @@ function renderPageStart($pageTitle, $activeMenu, $appTitle = 'CrowdSec Admin') 
     echo "    <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap\" rel=\"stylesheet\">\n";
     echo "    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css\">\n";
     echo "    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/7.5.0/css/flag-icons.min.css\">\n";
-    echo "    <script type=\"text/javascript\" src=\"/assets/js/app.js\"></script>";
+    echo "    <script type=\"module\" src=\"/assets/js/app.js\"></script>";
     if ($activeMenu === 'dashboard') {
         echo "    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/jsvectormap/1.5.3/css/jsvectormap.min.css\">\n";
     }
