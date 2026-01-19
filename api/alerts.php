@@ -4,6 +4,7 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/api_client.php';
 require_once __DIR__ . '/../includes/audit.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/alerts_helper.php';
 
 requireLogin();
 
@@ -23,8 +24,9 @@ function buildAlertFilters($since) {
         'country' => trim((string) ($_GET['country'] ?? ''))
     ];
 
-    $params = [':since' => $since];
-    $conditions = ['a.created_at >= :since'];
+    $params = [];
+    $conditions = ['a.created_at >= ?'];
+    $params[] = $since;
 
     $definitions = [
         [
@@ -178,7 +180,7 @@ try {
                 FROM alerts a
                 LEFT JOIN decisions d ON d.alert_decisions = a.id
                 LEFT JOIN machines m ON m.id = a.machine_alerts
-                {$whereSql}
+                WHERE {$whereSql}
                 GROUP BY a.id
             ) as filtered_alerts
         ");
@@ -292,17 +294,17 @@ try {
                 WHERE scenario IS NOT NULL AND source_ip IS NOT NULL
                 GROUP BY scenario, source_ip
                 HAVING COUNT(*) > 1
-                   AND TIMESTAMPDIFF(SECOND, MIN(created_at), MAX(created_at)) >= :repeated_window
+                   AND TIMESTAMPDIFF(SECOND, MIN(created_at), MAX(created_at)) >= ?
             ) repeated
                 ON repeated.scenario = a.scenario
                 AND repeated.source_ip = a.source_ip
-            {$whereSql}
+            WHERE {$whereSql}
             GROUP BY a.id
-            ORDER BY {$sortConfig['order_by']}, a.created_at DESC
+            ORDER BY {$sortConfig['orderby']}, a.created_at DESC
             {$limitSql}
         ");
 
-        $stmt->execute(array_merge([':repeated_window' => $repeatedWindowSeconds], $params));
+        $stmt->execute(array_merge([$repeatedWindowSeconds], $params));
         $alerts = $stmt->fetchAll();
 
         // Enrich with decisions

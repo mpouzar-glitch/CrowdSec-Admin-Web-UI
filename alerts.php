@@ -96,7 +96,7 @@ $filterQuery = array_filter([
     'simulated' => $filters['simulated'],
 ]);
 
-$buildQuery = function (string $column) use ($sort, $sortDir, $filterQuery): string {
+$buildSortQuery = function (string $column) use ($sort, $sortDir, $filterQuery): string {
     $nextDir = ($sort === $column && $sortDir === 'asc') ? 'desc' : 'asc';
     $params = array_merge($filterQuery, [
         'sort' => $column,
@@ -104,6 +104,15 @@ $buildQuery = function (string $column) use ($sort, $sortDir, $filterQuery): str
         'page' => 1
     ]);
     return '?' . buildQueryString($params);
+};
+
+$buildPaginationQuery = function (array $params) use ($filterQuery, $sort, $sortDir): string {
+    $queryParams = array_merge($filterQuery, [
+        'sort' => $sort,
+        'dir' => $sortDir,
+    ], $params);
+
+    return buildQueryString($queryParams);
 };
 
 $filterDefinitions = [
@@ -194,7 +203,7 @@ renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
                 <?php
                 echo renderMessagesTableHeader([
                     'sort' => $sort,
-                    'buildSortLink' => fn(string $column) => '/alerts.php' . $buildQuery($column),
+                    'buildSortLink' => fn(string $column) => '/alerts.php' . $buildSortQuery($column),
                     'getSortIcon' => $getSortIcon,
                     'columns' => [
                         'created_at',
@@ -298,7 +307,7 @@ renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
     <?= renderPagination([
         'current' => $page,
         'total' => $totalPages,
-        'buildQuery' => $buildQuery,
+        'buildQuery' => $buildPaginationQuery,
         'baseUrl' => '/alerts.php',
     ]) ?>
 <?php
