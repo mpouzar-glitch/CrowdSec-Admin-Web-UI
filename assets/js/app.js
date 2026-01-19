@@ -1592,8 +1592,8 @@ function findAlertById(alertId) {
     return alertsData.find(alert => Number(alert.id) === Number(alertId));
 }
 
-async function toggleAlertDecision(alertId) {
-    const alert = findAlertById(alertId);
+async function toggleAlertDecision(id) {
+    const alert = await apiGet(`/alerts.php?id=${id}`);
     if (!alert) return;
 
     const ip = alert.source_ip || '';
@@ -1614,9 +1614,10 @@ async function toggleAlertDecision(alertId) {
     }
 }
 
-function extendAlertDecision(alertId) {
-    const alert = findAlertById(alertId);
+async function extendAlertDecision(id) {
+    const alert = await apiGet(`/alerts.php?id=${id}`);
     if (!alert) return;
+    
     const ip = alert.source_ip || '';
     const activeDecisions = (alert.decisions || []).filter(decision => !decision.expired);
     if (!ip || activeDecisions.length === 0) return;

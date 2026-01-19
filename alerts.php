@@ -259,13 +259,13 @@ renderPageStart($appTitle . ' - Alerts', 'alerts', $appTitle);
                                         <button type="button" class="icon-btn icon-btn-primary" onclick="void viewAlert(<?= $alertId ?>)" aria-label="Detail" title="Detail">
                                             <i class="fa-solid fa-eye"></i>
                                         </button>
-                                        <button type="button" class="icon-btn <?= $banClass ?>" onclick="toggleAlertDecision(<?= $alertId ?>)" <?= $ipDisabled ? 'disabled' : '' ?> aria-label="<?= htmlspecialchars($banLabel) ?>" title="<?= htmlspecialchars($banLabel) ?>">
+                                        <button type="button" class="icon-btn <?= $banClass ?>" onclick="void toggleAlertDecision(<?= $alertId ?>)" <?= $ipDisabled ? 'disabled' : '' ?> aria-label="<?= htmlspecialchars($banLabel) ?>" title="<?= htmlspecialchars($banLabel) ?>">
                                             <i class="fa-solid <?= $banIcon ?>"></i>
                                         </button>
-                                        <button type="button" class="icon-btn icon-btn-primary" onclick="extendAlertDecision(<?= $alertId ?>)" <?= $extendDisabled ? 'disabled' : '' ?> aria-label="Prodloužit ban" title="Prodloužit ban">
+                                        <button type="button" class="icon-btn icon-btn-primary" onclick="void extendAlertDecision(<?= $alertId ?>)" <?= $extendDisabled ? 'disabled' : '' ?> aria-label="Prodloužit ban" title="Prodloužit ban">
                                             <i class="fa-solid fa-clock"></i>
                                         </button>
-                                        <button type="button" class="icon-btn icon-btn-success" onclick="addAlertIpToWhitelist('<?= htmlspecialchars($sourceIp, ENT_QUOTES) ?>')" <?= $ipDisabled ? 'disabled' : '' ?> aria-label="Whitelist" title="Whitelist">
+                                        <button type="button" class="icon-btn icon-btn-success" onclick="void addAlertIpToWhitelist('<?= htmlspecialchars($sourceIp, ENT_QUOTES) ?>')" <?= $ipDisabled ? 'disabled' : '' ?> aria-label="Whitelist" title="Whitelist">
                                             <i class="fa-solid fa-shield"></i>
                                         </button>
                                     </div>
